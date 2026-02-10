@@ -196,7 +196,7 @@ export const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => 
                     </p>
                     {t.originalAmount && t.originalCurrency === 'USD' && (
                         <p className="text-xs text-slate-500 font-mono mt-0.5">
-                            ${t.originalAmount.toFixed(2)}
+                            ${t.originalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                     )}
                     <button 
