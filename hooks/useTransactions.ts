@@ -3,7 +3,7 @@ import { Transaction } from '../types';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const STORAGE_KEY = 'lumina_transactions_v1';
+const STORAGE_KEY = 'niki_transactions_v1';
 
 export const useTransactions = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -50,7 +50,7 @@ export const useTransactions = () => {
     // Title
     doc.setFontSize(20);
     doc.setTextColor(40);
-    doc.text("Lumina Expense Report", 14, 22);
+    doc.text("Niki Expense Report", 14, 22);
     
     // Subtitle
     doc.setFontSize(11);
@@ -95,7 +95,7 @@ export const useTransactions = () => {
       }
     });
 
-    doc.save(`lumina_report_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`niki_report_${new Date().toISOString().split('T')[0]}.pdf`);
   }, [transactions]);
 
   const exportCSV = useCallback(() => {
@@ -127,7 +127,7 @@ export const useTransactions = () => {
     const url = URL.createObjectURL(blob);
     
     link.setAttribute('href', url);
-    link.setAttribute('download', `lumina_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `niki_export_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     
     document.body.appendChild(link);

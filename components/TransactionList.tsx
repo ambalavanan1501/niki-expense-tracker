@@ -37,7 +37,7 @@ const HighlightText = ({ text, highlight }: { text: string; highlight: string })
     <span>
       {parts.map((part, i) => 
         regex.test(part) ? (
-          <span key={i} className="bg-yellow-500/30 text-yellow-200 rounded px-0.5">{part}</span>
+          <span key={i} className="bg-yellow-500/30 text-yellow-800 dark:text-yellow-200 rounded px-0.5">{part}</span>
         ) : (
           <span key={i}>{part}</span>
         )
@@ -93,7 +93,7 @@ export const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => 
 
   return (
     <div className="space-y-6 pb-24">
-      <div className="sticky top-0 z-20 bg-[#0f172a]/95 backdrop-blur-md pt-4 pb-2 space-y-3 shadow-sm shadow-slate-900/50">
+      <div className="sticky top-0 z-20 bg-slate-50/95 dark:bg-[#0f172a]/95 backdrop-blur-md pt-4 pb-2 space-y-3 shadow-sm shadow-slate-200/50 dark:shadow-slate-900/50">
         {/* Search Bar */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -102,7 +102,7 @@ export const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => 
             placeholder="Search transactions..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-800/50 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-10 pr-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
           />
         </div>
 
@@ -112,7 +112,7 @@ export const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => 
             <select
                 value={range}
                 onChange={(e) => setRange(e.target.value as FilterRange)}
-                className="bg-slate-800/50 border border-white/10 text-slate-300 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
             >
                 <option value="all">All Time</option>
                 <option value="today">Today</option>
@@ -124,7 +124,7 @@ export const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => 
             <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="bg-slate-800/50 border border-white/10 text-slate-300 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
             >
                 <option value="all">All Categories</option>
                 {CATEGORIES.map(cat => (
@@ -142,7 +142,7 @@ export const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => 
                             type="date" 
                             value={customStart}
                             onChange={(e) => setCustomStart(e.target.value)}
-                            className="w-full bg-slate-800/50 border border-white/10 rounded-lg py-2 pl-9 pr-2 text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 rounded-lg py-2 pl-9 pr-2 text-slate-900 dark:text-white dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
                             placeholder="Start"
                         />
                     </div>
@@ -153,7 +153,7 @@ export const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => 
                             type="date" 
                             value={customEnd}
                             onChange={(e) => setCustomEnd(e.target.value)}
-                            className="w-full bg-slate-800/50 border border-white/10 rounded-lg py-2 pl-9 pr-2 text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 rounded-lg py-2 pl-9 pr-2 text-slate-900 dark:text-white dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
                         />
                     </div>
                 </div>
@@ -171,18 +171,18 @@ export const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => 
           filteredTransactions.map(t => {
             const Icon = CATEGORY_ICONS[t.category] || MoreHorizontal;
             return (
-              <Card key={t.id} className="p-4 group hover:bg-slate-800/60 transition-colors">
+              <Card key={t.id} className="p-4 group hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className={`p-2.5 rounded-full ${t.type === 'income' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                    <div className={`p-2.5 rounded-full ${t.type === 'income' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/20 text-red-600 dark:text-red-400'}`}>
                       {t.type === 'income' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
                     </div>
                     <div>
-                      <h4 className="text-white font-medium">
+                      <h4 className="text-slate-800 dark:text-white font-medium">
                         <HighlightText text={t.description} highlight={search} />
                       </h4>
-                      <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
-                        <span className={`flex items-center gap-1.5 px-2 py-1 rounded-md border ${CATEGORY_COLORS[t.category] || 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}>
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        <span className={`flex items-center gap-1.5 px-2 py-1 rounded-md border ${CATEGORY_COLORS[t.category] || 'bg-slate-100 dark:bg-slate-500/20 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-500/30'}`}>
                           <Icon size={14} strokeWidth={2.5} />
                           {t.category}
                         </span>
@@ -191,7 +191,7 @@ export const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => 
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`font-bold ${t.type === 'income' ? 'text-emerald-400' : 'text-white'}`}>
+                    <p className={`font-bold ${t.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
                       {t.type === 'income' ? '+' : '-'}₹{t.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                     {t.originalAmount && t.originalCurrency === 'USD' && (
@@ -201,7 +201,7 @@ export const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => 
                     )}
                     <button 
                       onClick={() => onDelete(t.id)}
-                      className="mt-1 text-slate-600 hover:text-red-400 transition-colors p-1.5"
+                      className="mt-1 text-slate-400 hover:text-red-500 transition-colors p-1.5"
                     >
                       <Trash2 size={16} />
                     </button>

@@ -3,6 +3,7 @@ import { Transaction } from '../types';
 import { Card } from './Card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Wallet, TrendingUp, TrendingDown } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
 
 interface Props {
   transactions: Transaction[];
@@ -11,6 +12,7 @@ interface Props {
 export const Dashboard: React.FC<Props> = ({ transactions }) => {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
+  const { theme } = useTheme();
 
   const stats = useMemo(() => {
     return transactions.reduce(
@@ -54,13 +56,13 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Balance */}
         <Card className="p-6 relative overflow-hidden group">
-            <div className="absolute -right-6 -top-6 w-24 h-24 bg-indigo-500/20 rounded-full blur-2xl group-hover:bg-indigo-500/30 transition-all"></div>
+            <div className="absolute -right-6 -top-6 w-24 h-24 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-2xl group-hover:bg-indigo-500/20 dark:group-hover:bg-indigo-500/30 transition-all"></div>
             <div className="flex items-start justify-between">
                 <div>
-                    <p className="text-slate-400 text-sm font-medium mb-1">Total Balance</p>
-                    <h3 className="text-3xl font-bold text-white">₹{stats.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">Total Balance</p>
+                    <h3 className="text-3xl font-bold text-slate-800 dark:text-white">₹{stats.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                 </div>
-                <div className="p-3 bg-indigo-500/20 rounded-xl text-indigo-400">
+                <div className="p-3 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-xl text-indigo-600 dark:text-indigo-400">
                     <Wallet size={24} />
                 </div>
             </div>
@@ -71,10 +73,10 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
             <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl"></div>
              <div className="flex items-start justify-between">
                 <div>
-                    <p className="text-slate-400 text-sm font-medium mb-1">Monthly Income</p>
-                    <h3 className="text-3xl font-bold text-emerald-400">+₹{stats.income.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">Monthly Income</p>
+                    <h3 className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">+₹{stats.income.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                 </div>
-                <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-400">
+                <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400">
                     <TrendingUp size={24} />
                 </div>
             </div>
@@ -85,10 +87,10 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
              <div className="absolute -right-6 -top-6 w-24 h-24 bg-red-500/10 rounded-full blur-2xl"></div>
              <div className="flex items-start justify-between">
                 <div>
-                    <p className="text-slate-400 text-sm font-medium mb-1">Monthly Expenses</p>
-                    <h3 className="text-3xl font-bold text-red-400">-₹{stats.expense.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">Monthly Expenses</p>
+                    <h3 className="text-3xl font-bold text-red-600 dark:text-red-400">-₹{stats.expense.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                 </div>
-                <div className="p-3 bg-red-500/10 rounded-xl text-red-400">
+                <div className="p-3 bg-red-500/10 rounded-xl text-red-600 dark:text-red-400">
                     <TrendingDown size={24} />
                 </div>
             </div>
@@ -97,7 +99,7 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-6 h-[350px]">
-            <h4 className="text-lg font-semibold text-white mb-4">Expense Breakdown</h4>
+            <h4 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Expense Breakdown</h4>
             {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -116,8 +118,14 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
                     ))}
                     </Pie>
                     <Tooltip 
-                        contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', color: '#f1f5f9' }}
-                        itemStyle={{ color: '#f1f5f9' }}
+                        contentStyle={{ 
+                          backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', 
+                          border: 'none', 
+                          borderRadius: '12px', 
+                          color: theme === 'dark' ? '#f1f5f9' : '#1e293b',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        }}
+                        itemStyle={{ color: theme === 'dark' ? '#f1f5f9' : '#1e293b' }}
                         formatter={(value: number) => `₹${value.toFixed(2)}`}
                     />
                     <Legend verticalAlign="bottom" height={36}/>
@@ -132,12 +140,12 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
         
         {/* Placeholder for future or simple list preview */}
         <Card className="p-6 flex flex-col justify-center items-center text-center space-y-4">
-             <h4 className="text-lg font-semibold text-white">Financial Health</h4>
-             <p className="text-slate-400 text-sm max-w-xs">
+             <h4 className="text-lg font-semibold text-slate-800 dark:text-white">Financial Health</h4>
+             <p className="text-slate-500 dark:text-slate-400 text-sm max-w-xs">
                 Your total balance is {stats.balance >= 0 ? 'positive' : 'negative'}. 
                 {stats.income > stats.expense ? " You're saving money this month!" : " Watch your spending this month."}
              </p>
-             <div className="w-full bg-slate-700/50 rounded-full h-4 overflow-hidden">
+             <div className="w-full bg-slate-200 dark:bg-slate-700/50 rounded-full h-4 overflow-hidden">
                 <div 
                     className="h-full bg-indigo-500 transition-all duration-1000" 
                     style={{ width: `${stats.income === 0 ? 0 : Math.min((stats.expense / stats.income) * 100, 100)}%` }}

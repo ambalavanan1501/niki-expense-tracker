@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { useTransactions } from './hooks/useTransactions';
 import { usePWA } from './hooks/usePWA';
+import { useTheme } from './hooks/useTheme';
 import { Dashboard } from './components/Dashboard';
 import { TransactionList } from './components/TransactionList';
 import { TransactionForm } from './components/TransactionForm';
 import { Modal } from './components/Modal';
-import { Plus, Download, Trash2, WifiOff, RefreshCw, FileText } from 'lucide-react';
-import { Button } from './components/Button';
+import { Plus, Download, Trash2, WifiOff, FileText, Moon, Sun, Smartphone } from 'lucide-react';
 import { vibrate } from './utils/haptics';
 
 function App() {
   const { transactions, addTransaction, removeTransaction, clearAllData, exportPDF, exportCSV } = useTransactions();
   const { isOffline, showInstallPrompt, installApp } = usePWA();
+  const { theme, toggleTheme } = useTheme();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions'>('dashboard');
 
@@ -20,8 +21,13 @@ function App() {
     setIsFormOpen(true);
   };
 
+  const handleThemeToggle = () => {
+    vibrate(10);
+    toggleTheme();
+  };
+
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 selection:bg-indigo-500/30 safe-area-top safe-area-bottom">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-200 selection:bg-indigo-500/30 safe-area-top safe-area-bottom transition-colors duration-300">
       {/* Offline Toast */}
       {isOffline && (
         <div className="fixed top-4 left-4 right-4 z-50 animate-fade-in-down safe-area-top pt-2">
@@ -32,50 +38,56 @@ function App() {
         </div>
       )}
 
-      {/* PWA Install Prompt */}
-      {showInstallPrompt && (
-        <div className="fixed top-20 left-4 right-4 z-40 animate-fade-in">
-           <div className="bg-indigo-600/90 backdrop-blur text-white p-4 rounded-xl shadow-lg flex items-center justify-between border border-white/10">
-              <div className="text-sm font-medium">Install App for better experience</div>
-              <button 
-                onClick={installApp} 
-                className="bg-white text-indigo-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors"
-              >
-                Install
-              </button>
-           </div>
-        </div>
-      )}
-
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#0f172a]/80 backdrop-blur-md border-b border-white/5">
+      <header className="sticky top-0 z-30 bg-slate-50/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-200 dark:border-white/5 transition-colors">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <span className="font-bold text-xl text-white">L</span>
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20 text-white">
+              <span className="font-bold text-xl">N</span>
             </div>
-            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-              Lumina
+            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-500 dark:from-white dark:to-slate-400">
+              Niki
             </h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button 
+              onClick={handleThemeToggle}
+              className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/5 rounded-lg transition-colors"
+              title="Toggle Theme"
+            >
+              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+            
+            <div className="w-px h-6 bg-slate-200 dark:bg-white/10 mx-1"></div>
+
+            {/* Install PWA Button */}
+            {showInstallPrompt && (
+              <button 
+                onClick={() => { vibrate(10); installApp(); }}
+                className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition-colors animate-pulse"
+                title="Install App"
+              >
+                <Smartphone size={20} />
+              </button>
+            )}
+            
             <button 
               onClick={exportCSV}
-              className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/5 rounded-lg transition-colors"
               title="Export CSV"
             >
               <FileText size={20} />
             </button>
             <button 
               onClick={exportPDF}
-              className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/5 rounded-lg transition-colors"
               title="Export PDF"
             >
               <Download size={20} />
             </button>
             <button 
               onClick={clearAllData}
-              className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+              className="p-2 text-slate-500 dark:text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
               title="Clear Data"
             >
               <Trash2 size={20} />
@@ -88,13 +100,13 @@ function App() {
       <main className="max-w-4xl mx-auto px-4 py-6">
         
         {/* Navigation Tabs */}
-        <div className="flex p-1 bg-slate-900/50 rounded-xl mb-6 border border-white/5">
+        <div className="flex p-1 bg-slate-200 dark:bg-slate-900/50 rounded-xl mb-6 border border-slate-300 dark:border-white/5">
           <button
             onClick={() => { setActiveTab('dashboard'); vibrate(10); }}
             className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
               activeTab === 'dashboard' 
-                ? 'bg-slate-700 text-white shadow-lg' 
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' 
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Dashboard
@@ -103,8 +115,8 @@ function App() {
             onClick={() => { setActiveTab('transactions'); vibrate(10); }}
             className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
               activeTab === 'transactions' 
-                ? 'bg-slate-700 text-white shadow-lg' 
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' 
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Transactions

@@ -32,12 +32,12 @@ export const Modal: React.FC<Props> = ({ isOpen, onClose, children }) => {
       <div 
         ref={overlayRef}
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-slate-900/60 dark:bg-slate-900/80 backdrop-blur-sm transition-opacity"
       ></div>
       
       {/* Content */}
       <div className="relative w-full max-w-lg transform transition-all">
-        <div className="bg-[#1e293b] border border-white/10 shadow-2xl rounded-2xl p-6">
+        <div className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-white/10 shadow-2xl rounded-2xl p-6">
           {children}
         </div>
       </div>

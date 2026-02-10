@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="https://lucide.dev/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Lumina" />
-    <title>Lumina Expense Tracker</title>
+    <meta name="apple-mobile-web-app-title" content="Niki" />
+    <title>Niki Expense Tracker</title>
     <meta name="description" content="Advanced PWA Expense Tracker" />
     <meta name="theme-color" content="#0f172a" />
     <link rel="manifest" href="/manifest.json" />
@@ -30,25 +30,32 @@
     </script>
     <style>
       body {
-        background-color: #0f172a;
-        color: #f8fafc;
+        /* Default to dark, JS will toggle */
+        background-color: #0f172a; 
         -webkit-tap-highlight-color: transparent;
         overscroll-behavior-y: none; /* Prevent pull-to-refresh on mobile */
+      }
+      html:not(.dark) body {
+        background-color: #f8fafc;
       }
       /* Custom Scrollbar */
       ::-webkit-scrollbar {
         width: 6px;
       }
       ::-webkit-scrollbar-track {
-        background: #1e293b; 
+        background: transparent; 
       }
       ::-webkit-scrollbar-thumb {
-        background: #475569; 
+        background: #94a3b8; 
         border-radius: 3px;
       }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #64748b; 
+      .dark ::-webkit-scrollbar-track {
+        background: #1e293b;
       }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+      
       /* Safe area padding for iPhones with notch */
       .safe-area-top {
         padding-top: env(safe-area-inset-top);
