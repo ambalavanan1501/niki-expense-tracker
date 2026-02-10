@@ -2,45 +2,71 @@ import { useState, useEffect, useCallback } from 'react';
 import { Transaction } from '../types';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-
-const STORAGE_KEY = 'niki_transactions_v1';
+import { dbOperations } from '../lib/db';
 
 export const useTransactions = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load from local storage on mount
+  // Load from IDB on mount
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
+    const loadTransactions = async () => {
       try {
-        setTransactions(JSON.parse(saved));
+        const data = await dbOperations.getAllTransactions();
+        // Sort by date descending
+        data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setTransactions(data);
       } catch (e) {
-        console.error('Failed to parse transactions', e);
+        console.error("Failed to load transactions from DB", e);
+      } finally {
+        setLoading(false);
       }
+    };
+    loadTransactions();
+  }, []);
+
+  const addTransaction = useCallback(async (transactionData: Omit<Transaction, 'id'>) => {
+    const newTransaction: Transaction = {
+      ...transactionData,
+      id: crypto.randomUUID(),
+      recurringId: transactionData.isRecurring ? crypto.randomUUID() : undefined
+    };
+
+    // Optimistic UI update
+    setTransactions(prev => {
+      const updated = [newTransaction, ...prev];
+      updated.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      return updated;
+    });
+
+    // Async DB update
+    try {
+      await dbOperations.addTransaction(newTransaction);
+    } catch (e) {
+      console.error("Failed to save transaction", e);
+      // Revert on failure could be implemented here
     }
   }, []);
 
-  // Save to local storage whenever transactions change
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-  }, [transactions]);
+  const removeTransaction = useCallback(async (id: string) => {
+    // Optimistic UI update
+    setTransactions(prev => prev.filter(t => t.id !== id));
 
-  const addTransaction = useCallback((transaction: Omit<Transaction, 'id'>) => {
-    const newTransaction: Transaction = {
-      ...transaction,
-      id: crypto.randomUUID(),
-    };
-    setTransactions((prev) => [newTransaction, ...prev]);
+    try {
+      await dbOperations.deleteTransaction(id);
+    } catch (e) {
+      console.error("Failed to delete transaction", e);
+    }
   }, []);
 
-  const removeTransaction = useCallback((id: string) => {
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
-  const clearAllData = useCallback(() => {
+  const clearAllData = useCallback(async () => {
     if (confirm('Are you sure you want to delete all data? This cannot be undone.')) {
       setTransactions([]);
-      localStorage.removeItem(STORAGE_KEY);
+      try {
+        await dbOperations.clearTransactions();
+      } catch (e) {
+        console.error("Failed to clear DB", e);
+      }
     }
   }, []);
 
@@ -99,17 +125,15 @@ export const useTransactions = () => {
   }, [transactions]);
 
   const exportCSV = useCallback(() => {
-    // Define headers
     const headers = ['ID', 'Date', 'Description', 'Category', 'Type', 'Amount (INR)', 'Original Amount', 'Currency', 'Exchange Rate'];
     
-    // Map data to CSV format
     const csvContent = [
       headers.join(','),
       ...transactions.map(t => {
         const row = [
           t.id,
           t.date,
-          `"${t.description.replace(/"/g, '""')}"`, // Escape quotes
+          `"${t.description.replace(/"/g, '""')}"`,
           t.category,
           t.type,
           t.amount.toFixed(2),
@@ -121,7 +145,6 @@ export const useTransactions = () => {
       })
     ].join('\n');
 
-    // Create Blob and download link
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -137,6 +160,7 @@ export const useTransactions = () => {
 
   return {
     transactions,
+    loading,
     addTransaction,
     removeTransaction,
     clearAllData,

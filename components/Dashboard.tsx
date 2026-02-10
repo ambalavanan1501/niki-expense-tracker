@@ -1,9 +1,12 @@
-import React, { useMemo } from 'react';
-import { Transaction } from '../types';
+import React, { useMemo, useState } from 'react';
+import { Transaction, Budget } from '../types';
 import { Card } from './Card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Wallet, TrendingUp, TrendingDown } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Target, Plus } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
+import { useBudgets } from '../hooks/useBudgets';
+import { BudgetForm } from './BudgetForm';
+import { Modal } from './Modal';
 
 interface Props {
   transactions: Transaction[];
@@ -13,6 +16,9 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   const { theme } = useTheme();
+  const { budgets, updateBudget } = useBudgets();
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<Budget | undefined>(undefined);
 
   const stats = useMemo(() => {
     return transactions.reduce(
@@ -35,6 +41,18 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
     );
   }, [transactions, currentMonth, currentYear]);
 
+  // Calculate spending per category for current month for Budget View
+  const categorySpending = useMemo(() => {
+    const spending: Record<string, number> = {};
+    transactions.forEach(t => {
+      const tDate = new Date(t.date);
+      if (t.type === 'expense' && tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear) {
+        spending[t.category] = (spending[t.category] || 0) + t.amount;
+      }
+    });
+    return spending;
+  }, [transactions, currentMonth, currentYear]);
+
   const chartData = useMemo(() => {
     const expenses = transactions.filter(t => t.type === 'expense');
     const categoryMap: Record<string, number> = {};
@@ -50,6 +68,16 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
   }, [transactions]);
 
   const COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6'];
+
+  const handleEditBudget = (budget: Budget) => {
+    setEditingBudget(budget);
+    setIsBudgetModalOpen(true);
+  };
+
+  const handleNewBudget = () => {
+    setEditingBudget(undefined);
+    setIsBudgetModalOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -98,6 +126,7 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Charts */}
         <Card className="p-6 h-[350px]">
             <h4 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Expense Breakdown</h4>
             {chartData.length > 0 ? (
@@ -138,22 +167,71 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
             )}
         </Card>
         
-        {/* Placeholder for future or simple list preview */}
-        <Card className="p-6 flex flex-col justify-center items-center text-center space-y-4">
-             <h4 className="text-lg font-semibold text-slate-800 dark:text-white">Financial Health</h4>
-             <p className="text-slate-500 dark:text-slate-400 text-sm max-w-xs">
-                Your total balance is {stats.balance >= 0 ? 'positive' : 'negative'}. 
-                {stats.income > stats.expense ? " You're saving money this month!" : " Watch your spending this month."}
-             </p>
-             <div className="w-full bg-slate-200 dark:bg-slate-700/50 rounded-full h-4 overflow-hidden">
-                <div 
-                    className="h-full bg-indigo-500 transition-all duration-1000" 
-                    style={{ width: `${stats.income === 0 ? 0 : Math.min((stats.expense / stats.income) * 100, 100)}%` }}
-                ></div>
-             </div>
-             <p className="text-xs text-slate-500">Expenses vs Income</p>
+        {/* Budgets Section */}
+        <Card className="p-6 flex flex-col">
+           <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                 <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-600 dark:text-indigo-400">
+                   <Target size={20} />
+                 </div>
+                 <h4 className="text-lg font-semibold text-slate-800 dark:text-white">Monthly Budgets</h4>
+              </div>
+              <button 
+                onClick={handleNewBudget}
+                className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 flex items-center gap-1"
+              >
+                <Plus size={14} /> Set Budget
+              </button>
+           </div>
+           
+           <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+              {budgets.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center py-8">
+                  <p className="text-sm">No budgets set yet.</p>
+                  <p className="text-xs mt-1">Set limits to track your spending.</p>
+                </div>
+              ) : (
+                budgets.map(budget => {
+                  const spent = categorySpending[budget.category] || 0;
+                  const percentage = Math.min((spent / budget.limit) * 100, 100);
+                  let barColor = 'bg-emerald-500';
+                  if (percentage > 90) barColor = 'bg-red-500';
+                  else if (percentage > 75) barColor = 'bg-amber-500';
+                  
+                  return (
+                    <div 
+                      key={budget.category} 
+                      onClick={() => handleEditBudget(budget)}
+                      className="cursor-pointer group hover:bg-slate-50 dark:hover:bg-slate-800/50 p-2 rounded-lg transition-colors"
+                    >
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">{budget.category}</span>
+                        <span className="text-slate-500 text-xs">
+                          <span className={percentage > 100 ? 'text-red-500 font-bold' : ''}>₹{spent.toLocaleString()}</span> 
+                          {' '}/ ₹{budget.limit.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                        <div 
+                          className={`h-full ${barColor} transition-all duration-1000`} 
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+           </div>
         </Card>
       </div>
+
+      <Modal isOpen={isBudgetModalOpen} onClose={() => setIsBudgetModalOpen(false)}>
+        <BudgetForm 
+          currentBudget={editingBudget}
+          onSave={updateBudget}
+          onClose={() => setIsBudgetModalOpen(false)}
+        />
+      </Modal>
     </div>
   );
 };

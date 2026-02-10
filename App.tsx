@@ -1,20 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useTransactions } from './hooks/useTransactions';
 import { usePWA } from './hooks/usePWA';
 import { useTheme } from './hooks/useTheme';
 import { Dashboard } from './components/Dashboard';
 import { TransactionList } from './components/TransactionList';
 import { TransactionForm } from './components/TransactionForm';
+import { CalendarView } from './components/CalendarView';
 import { Modal } from './components/Modal';
-import { Plus, Download, Trash2, WifiOff, FileText, Moon, Sun, Smartphone } from 'lucide-react';
+import { Plus, Download, Trash2, WifiOff, FileText, Moon, Sun, Smartphone, LayoutDashboard, List, Calendar as CalendarIcon, FileJson, Upload } from 'lucide-react';
 import { vibrate } from './utils/haptics';
+import { dbOperations } from './lib/db';
 
 function App() {
   const { transactions, addTransaction, removeTransaction, clearAllData, exportPDF, exportCSV } = useTransactions();
   const { isOffline, showInstallPrompt, installApp } = usePWA();
   const { theme, toggleTheme } = useTheme();
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'calendar'>('dashboard');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFabClick = () => {
     vibrate(15);
@@ -24,6 +27,51 @@ function App() {
   const handleThemeToggle = () => {
     vibrate(10);
     toggleTheme();
+  };
+
+  const handleExportJSON = async () => {
+    try {
+        const data = await dbOperations.exportData();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `niki_backup_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (error) {
+        console.error('Export failed', error);
+        alert('Failed to export data');
+    }
+  };
+
+  const handleImportJSON = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (confirm('Restoring data will overwrite all current transactions and budgets. Are you sure?')) {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const json = JSON.parse(event.target?.result as string);
+                // Basic validation
+                if (!json.transactions && !json.budgets) {
+                    throw new Error('Invalid backup file format');
+                }
+                
+                await dbOperations.importData(json);
+                alert('Data restored successfully! The app will now reload.');
+                window.location.reload();
+            } catch (error) {
+                console.error('Import failed', error);
+                alert('Failed to import data. Please ensure the file is a valid Niki backup.');
+            }
+        };
+        reader.readAsText(file);
+    }
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -37,6 +85,15 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Hidden File Input for Restore */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleImportJSON} 
+        className="hidden" 
+        accept=".json"
+      />
 
       {/* Header */}
       <header className="sticky top-0 z-30 bg-slate-50/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-200 dark:border-white/5 transition-colors">
@@ -71,6 +128,24 @@ function App() {
               </button>
             )}
             
+            {/* Data Management Buttons */}
+            <button 
+              onClick={handleExportJSON}
+              className="p-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200 dark:hover:bg-white/5 rounded-lg transition-colors"
+              title="Backup Data (JSON)"
+            >
+              <FileJson size={20} />
+            </button>
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200 dark:hover:bg-white/5 rounded-lg transition-colors"
+              title="Restore Data (JSON)"
+            >
+              <Upload size={20} />
+            </button>
+            
+            <div className="w-px h-6 bg-slate-200 dark:bg-white/10 mx-1"></div>
+
             <button 
               onClick={exportCSV}
               className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/5 rounded-lg transition-colors"
@@ -103,33 +178,44 @@ function App() {
         <div className="flex p-1 bg-slate-200 dark:bg-slate-900/50 rounded-xl mb-6 border border-slate-300 dark:border-white/5">
           <button
             onClick={() => { setActiveTab('dashboard'); vibrate(10); }}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
               activeTab === 'dashboard' 
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' 
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            Dashboard
+            <LayoutDashboard size={16} />
+            <span className="hidden sm:inline">Dashboard</span>
           </button>
           <button
             onClick={() => { setActiveTab('transactions'); vibrate(10); }}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
               activeTab === 'transactions' 
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' 
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            Transactions
+            <List size={16} />
+            <span className="hidden sm:inline">Transactions</span>
+          </button>
+          <button
+            onClick={() => { setActiveTab('calendar'); vibrate(10); }}
+            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'calendar' 
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' 
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <CalendarIcon size={16} />
+            <span className="hidden sm:inline">Calendar</span>
           </button>
         </div>
 
         {/* Views */}
-        <div className="min-h-[60vh]">
-          {activeTab === 'dashboard' ? (
-            <Dashboard transactions={transactions} />
-          ) : (
-            <TransactionList transactions={transactions} onDelete={removeTransaction} />
-          )}
+        <div className="min-h-[60vh] animate-fade-in">
+          {activeTab === 'dashboard' && <Dashboard transactions={transactions} />}
+          {activeTab === 'transactions' && <TransactionList transactions={transactions} onDelete={removeTransaction} />}
+          {activeTab === 'calendar' && <CalendarView transactions={transactions} />}
         </div>
       </main>
 

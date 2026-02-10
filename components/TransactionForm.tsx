@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Transaction, TransactionType } from '../types';
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '../constants';
 import { Button } from './Button';
-import { X, ArrowRightLeft } from 'lucide-react';
+import { X, ArrowRightLeft, Camera, RefreshCw, Loader2 } from 'lucide-react';
+import Tesseract from 'tesseract.js';
 
 interface Props {
   onSubmit: (transaction: Omit<Transaction, 'id'>) => void;
@@ -18,6 +19,11 @@ export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isRecurring, setIsRecurring] = useState(false);
+  
+  // OCR State
+  const [isScanning, setIsScanning] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,9 +48,59 @@ export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
       type,
       originalAmount,
       originalCurrency,
-      exchangeRate: rate
+      exchangeRate: rate,
+      isRecurring
     });
     onClose();
+  };
+
+  const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    try {
+      const result = await Tesseract.recognize(file, 'eng', {
+        logger: m => console.log(m)
+      });
+      
+      const text = result.data.text;
+      console.log('Scanned text:', text);
+
+      // Attempt to find total amount using Regex
+      // Looks for patterns like "Total 123.45" or just numbers at the end of lines
+      const amountRegex = /(?:total|amount|due)[\D]*?(\d+[.,]\d{2})/i;
+      const match = text.match(amountRegex);
+      
+      if (match && match[1]) {
+        // Clean up the amount (replace comma with dot if needed for float parsing)
+        const foundAmount = match[1].replace(',', '.');
+        setAmount(foundAmount);
+        
+        // Try to guess category or description (very basic)
+        if (text.toLowerCase().includes('restaurant') || text.toLowerCase().includes('food')) {
+            setCategory('Food');
+        } else if (text.toLowerCase().includes('uber') || text.toLowerCase().includes('fuel')) {
+            setCategory('Transport');
+        }
+      } else {
+        // Fallback: Find the largest number that looks like a price
+        const allNumbers = text.match(/\d+[.,]\d{2}/g);
+        if (allNumbers) {
+            const maxVal = Math.max(...allNumbers.map(n => parseFloat(n.replace(',', '.'))));
+            if (isFinite(maxVal)) setAmount(maxVal.toString());
+        } else {
+            alert('Could not detect an amount. Please enter manually.');
+        }
+      }
+    } catch (err) {
+      console.error('OCR Error:', err);
+      alert('Failed to scan receipt.');
+    } finally {
+      setIsScanning(false);
+      // Reset input
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const convertedAmount = amount ? (parseFloat(amount) * EXCHANGE_RATE).toFixed(2) : '0.00';
@@ -88,14 +144,32 @@ export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
         <div>
           <div className="flex justify-between items-center mb-1">
             <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">Amount</label>
-            <button
-              type="button"
-              onClick={() => setCurrency(prev => prev === 'INR' ? 'USD' : 'INR')}
-              className="text-xs flex items-center gap-1 text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
-            >
-              <ArrowRightLeft size={12} />
-              Switch to {currency === 'INR' ? 'USD' : 'INR'}
-            </button>
+            <div className="flex gap-3">
+                <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isScanning}
+                className="text-xs flex items-center gap-1 text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors disabled:opacity-50"
+                >
+                {isScanning ? <Loader2 size={12} className="animate-spin"/> : <Camera size={12} />}
+                {isScanning ? 'Scanning...' : 'Scan Receipt'}
+                </button>
+                <input 
+                    type="file" 
+                    accept="image/*" 
+                    ref={fileInputRef} 
+                    onChange={handleScanReceipt} 
+                    className="hidden" 
+                />
+                <button
+                type="button"
+                onClick={() => setCurrency(prev => prev === 'INR' ? 'USD' : 'INR')}
+                className="text-xs flex items-center gap-1 text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+                >
+                <ArrowRightLeft size={12} />
+                Switch to {currency === 'INR' ? 'USD' : 'INR'}
+                </button>
+            </div>
           </div>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 font-bold">
@@ -154,6 +228,31 @@ export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
             className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 rounded-xl py-3 px-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
             placeholder="What was it for?"
           />
+        </div>
+
+        {/* Recurring Toggle */}
+        <div className="flex items-center gap-3 pt-2">
+            <button
+                type="button"
+                onClick={() => setIsRecurring(!isRecurring)}
+                className={`
+                    relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900
+                    ${isRecurring ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'}
+                `}
+            >
+                <span
+                    className={`
+                        inline-block w-4 h-4 transform bg-white rounded-full transition duration-200 ease-in-out mt-1 ml-1
+                        ${isRecurring ? 'translate-x-5' : 'translate-x-0'}
+                    `}
+                />
+            </button>
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIsRecurring(!isRecurring)}>
+                <RefreshCw size={16} className={isRecurring ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'} />
+                <span className={`text-sm font-medium ${isRecurring ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>
+                    Repeat Monthly
+                </span>
+            </div>
         </div>
       </div>
 

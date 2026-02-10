@@ -1,3 +1,4 @@
+
 export type TransactionType = 'income' | 'expense';
 
 export interface Transaction {
@@ -10,12 +11,19 @@ export interface Transaction {
   originalAmount?: number;
   originalCurrency?: 'INR' | 'USD';
   exchangeRate?: number;
+  isRecurring?: boolean;
+  recurringId?: string;
 }
 
 export interface ExpenseSummary {
   totalBalance: number;
   monthlyIncome: number;
   monthlyExpense: number;
+}
+
+export interface Budget {
+  category: string;
+  limit: number;
 }
 
 export type FilterRange = 'all' | 'today' | 'week' | 'month' | 'custom';
