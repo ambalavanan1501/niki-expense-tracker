@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Transaction, TransactionType } from '../types';
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '../constants';
 import { Button } from './Button';
-import { X, ArrowRightLeft, Camera, RefreshCw, Loader2 } from 'lucide-react';
+import { X, ArrowRightLeft, Camera, RefreshCw, Loader2, ScanLine } from 'lucide-react';
 import Tesseract from 'tesseract.js';
 
 interface Props {
@@ -11,6 +11,86 @@ interface Props {
 }
 
 const EXCHANGE_RATE = 84.0; // Fixed rate for demo: 1 USD = 84 INR
+
+// Helper: Convert various date strings to YYYY-MM-DD
+const normalizeDate = (dateStr: string): string | null => {
+  try {
+    // Try native parsing first
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+    // Handle DD/MM/YYYY or DD-MM-YYYY manually if native fails
+    const parts = dateStr.match(/(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+    if (parts) {
+      return `${parts[3]}-${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
+};
+
+// Helper: Image Pre-processing for better OCR
+const preprocessImage = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject('Canvas context unavailable');
+
+        // Scale down large images for performance
+        const MAX_WIDTH = 1800;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > MAX_WIDTH) {
+          height = (height * MAX_WIDTH) / width;
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Apply Grayscale & Contrast
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+        
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          
+          // Grayscale (Luminosity method)
+          let gray = 0.21 * r + 0.72 * g + 0.07 * b;
+          
+          // Increase Contrast
+          const contrast = 1.2; // 1.0 is normal, >1.0 is higher
+          gray = contrast * (gray - 128) + 128;
+          
+          // Clamp
+          if (gray < 0) gray = 0;
+          if (gray > 255) gray = 255;
+
+          data[i] = gray;
+          data[i + 1] = gray;
+          data[i + 2] = gray;
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
+  });
+};
 
 export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
   const [type, setType] = useState<TransactionType>('expense');
@@ -23,6 +103,7 @@ export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
   
   // OCR State
   const [isScanning, setIsScanning] = useState(false);
+  const [scanStatus, setScanStatus] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -59,45 +140,115 @@ export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
     if (!file) return;
 
     setIsScanning(true);
+    setScanStatus('Optimizing image...');
+
     try {
-      const result = await Tesseract.recognize(file, 'eng', {
-        logger: m => console.log(m)
+      // 1. Pre-process Image
+      const processedImage = await preprocessImage(file);
+      
+      setScanStatus('Reading text...');
+      
+      // 2. Recognize Text
+      const result = await Tesseract.recognize(processedImage, 'eng', {
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            setScanStatus(`Scanning... ${Math.round(m.progress * 100)}%`);
+          }
+        }
       });
       
       const text = result.data.text;
-      console.log('Scanned text:', text);
-
-      // Attempt to find total amount using Regex
-      // Looks for patterns like "Total 123.45" or just numbers at the end of lines
-      const amountRegex = /(?:total|amount|due)[\D]*?(\d+[.,]\d{2})/i;
-      const match = text.match(amountRegex);
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
       
-      if (match && match[1]) {
-        // Clean up the amount (replace comma with dot if needed for float parsing)
-        const foundAmount = match[1].replace(',', '.');
-        setAmount(foundAmount);
-        
-        // Try to guess category or description (very basic)
-        if (text.toLowerCase().includes('restaurant') || text.toLowerCase().includes('food')) {
-            setCategory('Food');
-        } else if (text.toLowerCase().includes('uber') || text.toLowerCase().includes('fuel')) {
-            setCategory('Transport');
-        }
-      } else {
-        // Fallback: Find the largest number that looks like a price
-        const allNumbers = text.match(/\d+[.,]\d{2}/g);
-        if (allNumbers) {
-            const maxVal = Math.max(...allNumbers.map(n => parseFloat(n.replace(',', '.'))));
-            if (isFinite(maxVal)) setAmount(maxVal.toString());
-        } else {
-            alert('Could not detect an amount. Please enter manually.');
+      console.log('--- OCR Result ---');
+      console.log(text);
+      console.log('------------------');
+
+      // 3. Smart Extraction
+      
+      // A. Extract Amount
+      // Priority: Look for "Total", "Amount Due", "Balance"
+      // Fallback: Largest number with decimals
+      const currencySymbols = /[₹$€£]/g;
+      const amountRegex = /(\d{1,3}(?:[,.]\d{3})*(?:[.,]\d{2}))/g;
+      
+      let foundAmount = 0;
+      let foundHighConfAmount = false;
+
+      // Scan lines for Total keywords
+      for (const line of lines) {
+        const lowerLine = line.toLowerCase();
+        if (lowerLine.includes('total') || lowerLine.includes('amount') || lowerLine.includes('due') || lowerLine.includes('pay')) {
+           const matches = line.match(amountRegex);
+           if (matches) {
+             // Take the last number in the "Total" line usually
+             const valStr = matches[matches.length - 1].replace(/,/g, '.').replace(/[^\d.]/g, '');
+             // Fix common OCR error: 100.00 becoming 100..00
+             const cleanVal = parseFloat(valStr.split('.').slice(0, 2).join('.'));
+             
+             if (!isNaN(cleanVal) && cleanVal > foundAmount) {
+                foundAmount = cleanVal;
+                foundHighConfAmount = true;
+             }
+           }
         }
       }
+
+      // If no keyword found, find max number
+      if (!foundHighConfAmount) {
+         const allNumbers = text.match(amountRegex);
+         if (allNumbers) {
+            const values = allNumbers.map(n => {
+                const clean = parseFloat(n.replace(/,/g, '.').replace(/[^\d.]/g, ''));
+                return isNaN(clean) ? 0 : clean;
+            });
+            foundAmount = Math.max(...values);
+         }
+      }
+
+      if (foundAmount > 0) setAmount(foundAmount.toFixed(2));
+
+      // B. Extract Date
+      // Matches DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY
+      const dateRegex = /\b(\d{1,2}[-./]\d{1,2}[-./]\d{2,4})\b|\b(\d{4}[-./]\d{1,2}[-./]\d{1,2})\b/;
+      const dateMatch = text.match(dateRegex);
+      if (dateMatch) {
+         const normalized = normalizeDate(dateMatch[0]);
+         if (normalized) setDate(normalized);
+      }
+
+      // C. Extract Merchant / Category
+      // Simple heuristic: First non-date, non-number line is often the Merchant
+      let potentialMerchant = '';
+      for (const line of lines) {
+         if (line.length > 3 && !line.match(/\d/) && !line.toLowerCase().includes('receipt')) {
+            potentialMerchant = line.substring(0, 25); // Limit length
+            // Title Case
+            potentialMerchant = potentialMerchant.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            break;
+         }
+      }
+
+      if (potentialMerchant) setDescription(potentialMerchant);
+
+      // Category Guessing
+      const lowerText = text.toLowerCase();
+      if (lowerText.includes('restaurant') || lowerText.includes('food') || lowerText.includes('burger') || lowerText.includes('pizza')) {
+        setCategory('Food');
+      } else if (lowerText.includes('uber') || lowerText.includes('fuel') || lowerText.includes('petrol') || lowerText.includes('parking')) {
+        setCategory('Transport');
+      } else if (lowerText.includes('market') || lowerText.includes('grocery') || lowerText.includes('store')) {
+        setCategory('Shopping');
+      } else if (lowerText.includes('dr.') || lowerText.includes('pharmacy') || lowerText.includes('hospital')) {
+        setCategory('Healthcare');
+      }
+
     } catch (err) {
       console.error('OCR Error:', err);
-      alert('Failed to scan receipt.');
+      alert('Failed to read receipt. Please try a clearer image.');
     } finally {
       setIsScanning(false);
+      setScanStatus('');
       // Reset input
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -144,15 +295,21 @@ export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
         <div>
           <div className="flex justify-between items-center mb-1">
             <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">Amount</label>
-            <div className="flex gap-3">
+            <div className="flex gap-2">
                 <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isScanning}
-                className="text-xs flex items-center gap-1 text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors disabled:opacity-50"
+                className={`
+                    text-xs flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all
+                    ${isScanning 
+                        ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' 
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:text-indigo-600 dark:hover:text-indigo-400'
+                    }
+                `}
                 >
-                {isScanning ? <Loader2 size={12} className="animate-spin"/> : <Camera size={12} />}
-                {isScanning ? 'Scanning...' : 'Scan Receipt'}
+                {isScanning ? <Loader2 size={12} className="animate-spin"/> : <ScanLine size={12} />}
+                {isScanning ? scanStatus || 'Scanning...' : 'Scan Receipt'}
                 </button>
                 <input 
                     type="file" 
@@ -164,10 +321,10 @@ export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
                 <button
                 type="button"
                 onClick={() => setCurrency(prev => prev === 'INR' ? 'USD' : 'INR')}
-                className="text-xs flex items-center gap-1 text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+                className="text-xs flex items-center gap-1 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors px-2 py-1"
                 >
                 <ArrowRightLeft size={12} />
-                Switch to {currency === 'INR' ? 'USD' : 'INR'}
+                {currency}
                 </button>
             </div>
           </div>
