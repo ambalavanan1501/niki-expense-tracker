@@ -58,7 +58,7 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
             <div className="flex items-start justify-between">
                 <div>
                     <p className="text-slate-400 text-sm font-medium mb-1">Total Balance</p>
-                    <h3 className="text-3xl font-bold text-white">${stats.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                    <h3 className="text-3xl font-bold text-white">₹{stats.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                 </div>
                 <div className="p-3 bg-indigo-500/20 rounded-xl text-indigo-400">
                     <Wallet size={24} />
@@ -72,7 +72,7 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
              <div className="flex items-start justify-between">
                 <div>
                     <p className="text-slate-400 text-sm font-medium mb-1">Monthly Income</p>
-                    <h3 className="text-3xl font-bold text-emerald-400">+${stats.income.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                    <h3 className="text-3xl font-bold text-emerald-400">+₹{stats.income.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                 </div>
                 <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-400">
                     <TrendingUp size={24} />
@@ -86,7 +86,7 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
              <div className="flex items-start justify-between">
                 <div>
                     <p className="text-slate-400 text-sm font-medium mb-1">Monthly Expenses</p>
-                    <h3 className="text-3xl font-bold text-red-400">-${stats.expense.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                    <h3 className="text-3xl font-bold text-red-400">-₹{stats.expense.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                 </div>
                 <div className="p-3 bg-red-500/10 rounded-xl text-red-400">
                     <TrendingDown size={24} />
@@ -118,7 +118,7 @@ export const Dashboard: React.FC<Props> = ({ transactions }) => {
                     <Tooltip 
                         contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', color: '#f1f5f9' }}
                         itemStyle={{ color: '#f1f5f9' }}
-                        formatter={(value: number) => `$${value.toFixed(2)}`}
+                        formatter={(value: number) => `₹${value.toFixed(2)}`}
                     />
                     <Legend verticalAlign="bottom" height={36}/>
                 </PieChart>

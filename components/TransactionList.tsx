@@ -2,12 +2,49 @@ import React, { useState, useMemo } from 'react';
 import { Transaction, FilterRange } from '../types';
 import { CATEGORIES, CATEGORY_COLORS } from '../constants';
 import { Card } from './Card';
-import { Search, Filter, Trash2, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { 
+  Search, Filter, Trash2, ArrowUpRight, ArrowDownLeft,
+  Utensils, Car, Home, Zap, Film, HeartPulse, ShoppingBag, 
+  Banknote, TrendingUp, Laptop, MoreHorizontal
+} from 'lucide-react';
 
 interface Props {
   transactions: Transaction[];
   onDelete: (id: string) => void;
 }
+
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  'Food': Utensils,
+  'Transport': Car,
+  'Housing': Home,
+  'Utilities': Zap,
+  'Entertainment': Film,
+  'Healthcare': HeartPulse,
+  'Shopping': ShoppingBag,
+  'Salary': Banknote,
+  'Investment': TrendingUp,
+  'Freelance': Laptop,
+  'Other': MoreHorizontal
+};
+
+const HighlightText = ({ text, highlight }: { text: string; highlight: string }) => {
+  if (!highlight.trim()) {
+    return <span>{text}</span>;
+  }
+  const regex = new RegExp(`(${highlight})`, 'gi');
+  const parts = text.split(regex);
+  return (
+    <span>
+      {parts.map((part, i) => 
+        regex.test(part) ? (
+          <span key={i} className="bg-yellow-500/30 text-yellow-200 rounded px-0.5">{part}</span>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </span>
+  );
+};
 
 export const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => {
   const [range, setRange] = useState<FilterRange>('all');
@@ -84,37 +121,43 @@ export const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => 
             <p>No transactions found</p>
           </div>
         ) : (
-          filteredTransactions.map(t => (
-            <Card key={t.id} className="p-4 group hover:bg-slate-800/60 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`p-2.5 rounded-full ${t.type === 'income' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                    {t.type === 'income' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
-                  </div>
-                  <div>
-                    <h4 className="text-white font-medium">{t.description}</h4>
-                    <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-                      <span className={`px-2 py-0.5 rounded border ${CATEGORY_COLORS[t.category] || 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}>
-                        {t.category}
-                      </span>
-                      <span>{new Date(t.date).toLocaleDateString()}</span>
+          filteredTransactions.map(t => {
+            const Icon = CATEGORY_ICONS[t.category] || MoreHorizontal;
+            return (
+              <Card key={t.id} className="p-4 group hover:bg-slate-800/60 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2.5 rounded-full ${t.type === 'income' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                      {t.type === 'income' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
+                    </div>
+                    <div>
+                      <h4 className="text-white font-medium">
+                        <HighlightText text={t.description} highlight={search} />
+                      </h4>
+                      <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                        <span className={`flex items-center gap-1 px-2 py-0.5 rounded border ${CATEGORY_COLORS[t.category] || 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}>
+                          <Icon size={12} strokeWidth={2.5} />
+                          {t.category}
+                        </span>
+                        <span>{new Date(t.date).toLocaleDateString()}</span>
+                      </div>
                     </div>
                   </div>
+                  <div className="text-right">
+                    <p className={`font-bold ${t.type === 'income' ? 'text-emerald-400' : 'text-white'}`}>
+                      {t.type === 'income' ? '+' : '-'}₹{t.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </p>
+                    <button 
+                      onClick={() => onDelete(t.id)}
+                      className="mt-1 text-slate-600 hover:text-red-400 transition-colors p-1"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className={`font-bold ${t.type === 'income' ? 'text-emerald-400' : 'text-white'}`}>
-                    {t.type === 'income' ? '+' : '-'}${t.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </p>
-                  <button 
-                    onClick={() => onDelete(t.id)}
-                    className="mt-1 text-slate-600 hover:text-red-400 transition-colors p-1"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            </Card>
-          ))
+              </Card>
+            );
+          })
         )}
       </div>
     </div>

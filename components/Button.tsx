@@ -1,4 +1,5 @@
 import React from 'react';
+import { vibrate } from '../utils/haptics';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'glass';
@@ -12,6 +13,7 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'md', 
   fullWidth = false,
   className = '',
+  onClick,
   ...props 
 }) => {
   const baseStyles = "relative inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 active:scale-95 disabled:opacity-50 disabled:pointer-events-none rounded-xl";
@@ -29,6 +31,11 @@ export const Button: React.FC<ButtonProps> = ({
     lg: "px-6 py-3.5 text-lg"
   };
 
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    vibrate();
+    if (onClick) onClick(e);
+  };
+
   return (
     <button 
       className={`
@@ -38,6 +45,7 @@ export const Button: React.FC<ButtonProps> = ({
         ${fullWidth ? 'w-full' : ''} 
         ${className}
       `}
+      onClick={handleClick}
       {...props}
     >
       {children}

@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Transaction } from '../types';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const STORAGE_KEY = 'lumina_transactions_v1';
 
@@ -42,14 +44,81 @@ export const useTransactions = () => {
     }
   }, []);
 
-  const exportData = useCallback(() => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "lumina_export_" + new Date().toISOString() + ".json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+  const exportPDF = useCallback(() => {
+    const doc = new jsPDF();
+
+    // Title
+    doc.setFontSize(20);
+    doc.setTextColor(40);
+    doc.text("Lumina Expense Report", 14, 22);
+    
+    // Subtitle
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+
+    // Filter data for table
+    const tableData = transactions.map(t => [
+      new Date(t.date).toLocaleDateString(),
+      t.description,
+      t.category,
+      t.type.toUpperCase(),
+      `Rs. ${t.amount.toFixed(2)}`
+    ]);
+
+    autoTable(doc, {
+      head: [['Date', 'Description', 'Category', 'Type', 'Amount']],
+      body: tableData,
+      startY: 35,
+      theme: 'grid',
+      styles: { 
+        fontSize: 10, 
+        cellPadding: 3,
+      },
+      headStyles: { 
+        fillColor: [79, 70, 229], // Indigo 600
+        textColor: 255 
+      },
+      alternateRowStyles: {
+        fillColor: [249, 250, 251] // Slate 50
+      }
+    });
+
+    doc.save(`lumina_report_${new Date().toISOString().split('T')[0]}.pdf`);
+  }, [transactions]);
+
+  const exportCSV = useCallback(() => {
+    // Define headers
+    const headers = ['ID', 'Date', 'Description', 'Category', 'Type', 'Amount (INR)'];
+    
+    // Map data to CSV format
+    const csvContent = [
+      headers.join(','),
+      ...transactions.map(t => {
+        const row = [
+          t.id,
+          t.date,
+          `"${t.description.replace(/"/g, '""')}"`, // Escape quotes
+          t.category,
+          t.type,
+          t.amount.toFixed(2)
+        ];
+        return row.join(',');
+      })
+    ].join('\n');
+
+    // Create Blob and download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `lumina_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }, [transactions]);
 
   return {
@@ -57,6 +126,7 @@ export const useTransactions = () => {
     addTransaction,
     removeTransaction,
     clearAllData,
-    exportData
+    exportPDF,
+    exportCSV
   };
 };

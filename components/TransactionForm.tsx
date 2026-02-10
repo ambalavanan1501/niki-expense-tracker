@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Transaction, TransactionType } from '../types';
-import { CATEGORIES, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '../constants';
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '../constants';
 import { Button } from './Button';
-import { X } from 'lucide-react';
+import { X, ArrowRightLeft } from 'lucide-react';
 
 interface Props {
   onSubmit: (transaction: Omit<Transaction, 'id'>) => void;
   onClose: () => void;
 }
 
+const EXCHANGE_RATE = 84.0; // Fixed rate for demo: 1 USD = 84 INR
+
 export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -20,8 +23,13 @@ export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
     e.preventDefault();
     if (!amount || !description) return;
 
+    let finalAmount = parseFloat(amount);
+    if (currency === 'USD') {
+      finalAmount = finalAmount * EXCHANGE_RATE;
+    }
+
     onSubmit({
-      amount: parseFloat(amount),
+      amount: finalAmount,
       description,
       category,
       date,
@@ -29,6 +37,8 @@ export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
     });
     onClose();
   };
+
+  const convertedAmount = amount ? (parseFloat(amount) * EXCHANGE_RATE).toFixed(2) : '0.00';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -63,9 +73,21 @@ export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-400 mb-1">Amount</label>
+          <div className="flex justify-between items-center mb-1">
+            <label className="block text-sm font-medium text-slate-400">Amount</label>
+            <button
+              type="button"
+              onClick={() => setCurrency(prev => prev === 'INR' ? 'USD' : 'INR')}
+              className="text-xs flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              <ArrowRightLeft size={12} />
+              Switch to {currency === 'INR' ? 'USD' : 'INR'}
+            </button>
+          </div>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
+              {currency === 'INR' ? '₹' : '$'}
+            </span>
             <input
               type="number"
               step="0.01"
@@ -76,6 +98,13 @@ export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
               placeholder="0.00"
             />
           </div>
+          {currency === 'USD' && amount && (
+            <div className="mt-2 text-right text-sm text-slate-400">
+              <span className="text-slate-500">Approx: </span>
+              <span className="text-emerald-400 font-mono">₹{convertedAmount}</span>
+              <span className="text-xs text-slate-600 ml-1">(@ ₹{EXCHANGE_RATE}/$)</span>
+            </div>
+          )}
         </div>
 
         <div>

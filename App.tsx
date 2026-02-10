@@ -5,14 +5,20 @@ import { Dashboard } from './components/Dashboard';
 import { TransactionList } from './components/TransactionList';
 import { TransactionForm } from './components/TransactionForm';
 import { Modal } from './components/Modal';
-import { Plus, Download, Trash2, WifiOff, RefreshCw } from 'lucide-react';
+import { Plus, Download, Trash2, WifiOff, RefreshCw, FileText } from 'lucide-react';
 import { Button } from './components/Button';
+import { vibrate } from './utils/haptics';
 
 function App() {
-  const { transactions, addTransaction, removeTransaction, clearAllData, exportData } = useTransactions();
+  const { transactions, addTransaction, removeTransaction, clearAllData, exportPDF, exportCSV } = useTransactions();
   const { isOffline, showInstallPrompt, installApp } = usePWA();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions'>('dashboard');
+
+  const handleFabClick = () => {
+    vibrate(15);
+    setIsFormOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 selection:bg-indigo-500/30">
@@ -49,9 +55,16 @@ function App() {
           </div>
           <div className="flex items-center gap-2">
             <button 
-              onClick={exportData}
+              onClick={exportCSV}
               className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-              title="Export JSON"
+              title="Export CSV"
+            >
+              <FileText size={20} />
+            </button>
+            <button 
+              onClick={exportPDF}
+              className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              title="Export PDF"
             >
               <Download size={20} />
             </button>
@@ -106,7 +119,7 @@ function App() {
       {/* FAB - Quick Add */}
       <div className="fixed bottom-6 right-6 z-40">
         <button
-          onClick={() => setIsFormOpen(true)}
+          onClick={handleFabClick}
           className="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-2xl shadow-indigo-500/40 text-white hover:bg-indigo-500 hover:scale-105 active:scale-95 transition-all border border-indigo-400/30"
         >
           <Plus size={28} strokeWidth={2.5} />
