@@ -24,6 +24,12 @@ export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
     if (!amount || !description) return;
 
     let finalAmount = parseFloat(amount);
+    
+    // Store original details if currency is USD
+    const originalAmount = currency === 'USD' ? parseFloat(amount) : undefined;
+    const originalCurrency = currency === 'USD' ? 'USD' : 'INR';
+    const rate = currency === 'USD' ? EXCHANGE_RATE : undefined;
+
     if (currency === 'USD') {
       finalAmount = finalAmount * EXCHANGE_RATE;
     }
@@ -33,7 +39,10 @@ export const TransactionForm: React.FC<Props> = ({ onSubmit, onClose }) => {
       description,
       category,
       date,
-      type
+      type,
+      originalAmount,
+      originalCurrency,
+      exchangeRate: rate
     });
     onClose();
   };

@@ -58,21 +58,29 @@ export const useTransactions = () => {
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
 
     // Filter data for table
-    const tableData = transactions.map(t => [
-      new Date(t.date).toLocaleDateString(),
-      t.description,
-      t.category,
-      t.type.toUpperCase(),
-      `Rs. ${t.amount.toFixed(2)}`
-    ]);
+    const tableData = transactions.map(t => {
+      let originalInfo = '-';
+      if (t.originalCurrency === 'USD' && t.originalAmount) {
+        originalInfo = `$${t.originalAmount.toFixed(2)} (@ ${t.exchangeRate})`;
+      }
+
+      return [
+        new Date(t.date).toLocaleDateString(),
+        t.description,
+        t.category,
+        t.type.toUpperCase(),
+        `Rs. ${t.amount.toFixed(2)}`,
+        originalInfo
+      ];
+    });
 
     autoTable(doc, {
-      head: [['Date', 'Description', 'Category', 'Type', 'Amount']],
+      head: [['Date', 'Description', 'Category', 'Type', 'Amount (INR)', 'Original']],
       body: tableData,
       startY: 35,
       theme: 'grid',
       styles: { 
-        fontSize: 10, 
+        fontSize: 9, 
         cellPadding: 3,
       },
       headStyles: { 
@@ -81,6 +89,9 @@ export const useTransactions = () => {
       },
       alternateRowStyles: {
         fillColor: [249, 250, 251] // Slate 50
+      },
+      columnStyles: {
+        5: { fontStyle: 'italic', textColor: 100 }
       }
     });
 
@@ -89,7 +100,7 @@ export const useTransactions = () => {
 
   const exportCSV = useCallback(() => {
     // Define headers
-    const headers = ['ID', 'Date', 'Description', 'Category', 'Type', 'Amount (INR)'];
+    const headers = ['ID', 'Date', 'Description', 'Category', 'Type', 'Amount (INR)', 'Original Amount', 'Currency', 'Exchange Rate'];
     
     // Map data to CSV format
     const csvContent = [
@@ -101,7 +112,10 @@ export const useTransactions = () => {
           `"${t.description.replace(/"/g, '""')}"`, // Escape quotes
           t.category,
           t.type,
-          t.amount.toFixed(2)
+          t.amount.toFixed(2),
+          t.originalAmount ? t.originalAmount.toFixed(2) : '',
+          t.originalCurrency || 'INR',
+          t.exchangeRate || ''
         ];
         return row.join(',');
       })

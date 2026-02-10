@@ -7,6 +7,9 @@ export interface Transaction {
   category: string;
   date: string; // ISO string
   type: TransactionType;
+  originalAmount?: number;
+  originalCurrency?: 'INR' | 'USD';
+  exchangeRate?: number;
 }
 
 export interface ExpenseSummary {
@@ -15,7 +18,7 @@ export interface ExpenseSummary {
   monthlyExpense: number;
 }
 
-export type FilterRange = 'all' | 'today' | 'week' | 'month';
+export type FilterRange = 'all' | 'today' | 'week' | 'month' | 'custom';
 
 export interface FilterState {
   range: FilterRange;
