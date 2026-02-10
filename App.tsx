@@ -21,10 +21,10 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-[#0f172a] text-slate-200 selection:bg-indigo-500/30 safe-area-top safe-area-bottom">
       {/* Offline Toast */}
       {isOffline && (
-        <div className="fixed top-4 left-4 right-4 z-50 animate-fade-in-down">
+        <div className="fixed top-4 left-4 right-4 z-50 animate-fade-in-down safe-area-top pt-2">
           <div className="bg-amber-500/90 backdrop-blur text-white px-4 py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 text-sm font-medium">
             <WifiOff size={16} />
             You are offline. Changes will be saved locally.
@@ -34,10 +34,15 @@ function App() {
 
       {/* PWA Install Prompt */}
       {showInstallPrompt && (
-        <div className="fixed top-20 left-4 right-4 z-40">
-           <div className="bg-indigo-600/90 backdrop-blur text-white p-4 rounded-xl shadow-lg flex items-center justify-between">
-              <div className="text-sm">Install App for better experience</div>
-              <button onClick={installApp} className="bg-white text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-bold">Install</button>
+        <div className="fixed top-20 left-4 right-4 z-40 animate-fade-in">
+           <div className="bg-indigo-600/90 backdrop-blur text-white p-4 rounded-xl shadow-lg flex items-center justify-between border border-white/10">
+              <div className="text-sm font-medium">Install App for better experience</div>
+              <button 
+                onClick={installApp} 
+                className="bg-white text-indigo-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors"
+              >
+                Install
+              </button>
            </div>
         </div>
       )}
@@ -85,7 +90,7 @@ function App() {
         {/* Navigation Tabs */}
         <div className="flex p-1 bg-slate-900/50 rounded-xl mb-6 border border-white/5">
           <button
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => { setActiveTab('dashboard'); vibrate(10); }}
             className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
               activeTab === 'dashboard' 
                 ? 'bg-slate-700 text-white shadow-lg' 
@@ -95,7 +100,7 @@ function App() {
             Dashboard
           </button>
           <button
-            onClick={() => setActiveTab('transactions')}
+            onClick={() => { setActiveTab('transactions'); vibrate(10); }}
             className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
               activeTab === 'transactions' 
                 ? 'bg-slate-700 text-white shadow-lg' 
@@ -117,10 +122,11 @@ function App() {
       </main>
 
       {/* FAB - Quick Add */}
-      <div className="fixed bottom-6 right-6 z-40">
+      <div className="fixed bottom-8 right-6 z-40">
         <button
           onClick={handleFabClick}
           className="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-2xl shadow-indigo-500/40 text-white hover:bg-indigo-500 hover:scale-105 active:scale-95 transition-all border border-indigo-400/30"
+          aria-label="Add Transaction"
         >
           <Plus size={28} strokeWidth={2.5} />
         </button>

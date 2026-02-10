@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="https://lucide.dev/logo.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Lumina" />
     <title>Lumina Expense Tracker</title>
     <meta name="description" content="Advanced PWA Expense Tracker" />
     <meta name="theme-color" content="#0f172a" />
@@ -30,6 +33,7 @@
         background-color: #0f172a;
         color: #f8fafc;
         -webkit-tap-highlight-color: transparent;
+        overscroll-behavior-y: none; /* Prevent pull-to-refresh on mobile */
       }
       /* Custom Scrollbar */
       ::-webkit-scrollbar {
@@ -44,6 +48,13 @@
       }
       ::-webkit-scrollbar-thumb:hover {
         background: #64748b; 
+      }
+      /* Safe area padding for iPhones with notch */
+      .safe-area-top {
+        padding-top: env(safe-area-inset-top);
+      }
+      .safe-area-bottom {
+        padding-bottom: env(safe-area-inset-bottom);
       }
     </style>
   <script type="importmap">
